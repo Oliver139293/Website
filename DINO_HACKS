@@ -1,0 +1,1134 @@
+(() => {
+    if (typeof Runner === "undefined") {
+        console.error("Run this on chrome://dino");
+        return;
+    }
+
+    let godMode = false;
+    let infiniteJump = false;
+    let speedBoost = false;
+    let floatEnabled = false;
+    let stopBgCycle = false;
+
+    let speedValue = 10;
+    let floatSpeed = 5;
+
+    let scoreValue = 0;
+    let scoreLocked = false;
+
+    let playingIntro = false;
+
+    const originalGameOver = Runner.prototype.gameOver;
+    const originalOnKeyDown = Runner.prototype.onKeyDown;
+    const originalInvert = Runner.prototype.invert;
+
+    window.myDinoRunner = null;
+
+    document.getElementById("dino-power-box")?.remove();
+
+    // =========================
+    // GUI
+    // =========================
+
+    const gui = document.createElement("div");
+
+    gui.id = "dino-power-box";
+
+    gui.style.cssText = `
+        position: fixed;
+        top: 40px;
+        left: 40px;
+        width: 270px;
+        background: #1b1b1f;
+        color: white;
+        border: 1px solid #444;
+        border-radius: 9px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.6);
+        z-index: 2147483647;
+        font-family: Arial,sans-serif;
+        box-sizing: border-box;
+        overflow: hidden;
+        user-select: none;
+    `;
+
+    // =========================
+    // HEADER
+    // =========================
+
+    const header = document.createElement("div");
+
+    header.style.cssText = `
+        height: 44px;
+        padding: 0 8px 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #333;
+        box-sizing: border-box;
+        cursor: move;
+        white-space: nowrap;
+    `;
+
+    const title = document.createElement("span");
+
+    title.textContent = "🦖 Dino Cheat Engine";
+
+    title.style.cssText = `
+        color: #00ff88;
+        font-size: 13px;
+        font-weight: bold;
+        white-space: nowrap;
+    `;
+
+    const headerButtons = document.createElement("div");
+
+    headerButtons.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+    `;
+
+    function headerButton(text) {
+        const b = document.createElement("button");
+
+        b.textContent = text;
+
+        b.style.cssText = `
+            width: 27px;
+            height: 27px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        `;
+
+        b.onmouseenter = () => {
+            b.style.background = "#2b2b31";
+
+            if (!b.dataset.active) {
+                b.style.color = "#fff";
+            }
+        };
+
+        b.onmouseleave = () => {
+            b.style.background = "transparent";
+
+            if (!b.dataset.active) {
+                b.style.color = "#aaa";
+            }
+        };
+
+        return b;
+    }
+
+    const infoButton = headerButton("ⓘ");
+    const settingsButton = headerButton("⚙");
+    const minimizeButton = headerButton("−");
+
+    headerButtons.append(
+        infoButton,
+        settingsButton,
+        minimizeButton
+    );
+
+    header.append(title, headerButtons);
+    gui.appendChild(header);
+
+    // =========================
+    // VIEWPORT
+    // =========================
+
+    const viewport = document.createElement("div");
+
+    viewport.style.cssText = `
+        width: 100%;
+        overflow: hidden;
+        transition:
+            height .35s cubic-bezier(.22,.61,.36,1),
+            opacity .25s ease;
+    `;
+
+    const pages = document.createElement("div");
+
+    pages.style.cssText = `
+        display: flex;
+        width: 300%;
+        align-items: flex-start;
+        transition:
+            transform .4s cubic-bezier(.22,.61,.36,1);
+    `;
+
+    viewport.appendChild(pages);
+    gui.appendChild(viewport);
+
+    function createPage() {
+        const page = document.createElement("div");
+
+        page.style.cssText = `
+            width: 33.333333%;
+            flex: 0 0 33.333333%;
+            padding: 14px 15px 15px;
+            box-sizing: border-box;
+        `;
+
+        return page;
+    }
+
+    const mainPage = createPage();
+    const settingsPage = createPage();
+    const infoPage = createPage();
+
+    pages.append(
+        mainPage,
+        settingsPage,
+        infoPage
+    );
+
+    let currentPage = 0;
+    let minimized = false;
+
+    // =========================
+    // PAGE HELPERS
+    // =========================
+
+    function getCurrentPageElement() {
+        if (currentPage === 1)
+            return settingsPage;
+
+        if (currentPage === 2)
+            return infoPage;
+
+        return mainPage;
+    }
+
+    function resizeToPage() {
+        if (minimized)
+            return;
+
+        const page = getCurrentPageElement();
+
+        viewport.style.height =
+            page.scrollHeight + "px";
+    }
+
+    function setButtonActive(button, active) {
+        button.dataset.active =
+            active ? "true" : "";
+
+        button.style.color =
+            active ? "#00ff88" : "#aaa";
+    }
+
+    function updateHeaderButtons() {
+        setButtonActive(
+            settingsButton,
+            currentPage === 1
+        );
+
+        setButtonActive(
+            infoButton,
+            currentPage === 2
+        );
+    }
+
+    function changePage(page) {
+        currentPage = page;
+
+        pages.style.transform =
+            `translateX(-${page * 33.333333}%)`;
+
+        updateHeaderButtons();
+
+        requestAnimationFrame(() => {
+            resizeToPage();
+        });
+    }
+
+    // =========================
+    // OPEN PAGE
+    // =========================
+
+    function openPage(page) {
+
+        // If minimized, restore it first.
+        if (minimized) {
+            minimized = false;
+
+            viewport.style.opacity = "1";
+
+            minimizeButton.textContent = "−";
+
+            // Make sure the correct page is measured
+            // before resizing.
+            requestAnimationFrame(() => {
+                changePage(page);
+            });
+
+            return;
+        }
+
+        // Pressing the currently open
+        // Settings/Info button returns to Main.
+        if (currentPage === page) {
+            changePage(0);
+            return;
+        }
+
+        changePage(page);
+    }
+
+    // =========================
+    // HEADER BUTTONS
+    // =========================
+
+    settingsButton.onclick = e => {
+        e.stopPropagation();
+
+        openPage(1);
+    };
+
+    infoButton.onclick = e => {
+        e.stopPropagation();
+
+        openPage(2);
+    };
+
+    // =========================
+    // TOGGLES
+    // =========================
+
+    function createToggle(parent, name, callback) {
+
+        const row = document.createElement("div");
+
+        row.style.cssText = `
+            width: 100%;
+            height: 34px;
+            margin-bottom: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-sizing: border-box;
+            color: white;
+            font-size: 13px;
+        `;
+
+        const label = document.createElement("span");
+
+        label.textContent = name;
+
+        const toggle = document.createElement("div");
+
+        toggle.style.cssText = `
+            position: relative;
+            width: 38px;
+            height: 20px;
+            flex-shrink: 0;
+            border-radius: 20px;
+            background: #3a3a40;
+            cursor: pointer;
+            transition:
+                background .22s ease,
+                box-shadow .22s ease;
+        `;
+
+        const knob = document.createElement("div");
+
+        knob.style.cssText = `
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #aaa;
+            transition:
+                transform .22s cubic-bezier(.4,0,.2,1),
+                background .22s ease;
+        `;
+
+        toggle.appendChild(knob);
+
+        let enabled = false;
+
+        function setToggle(value) {
+
+            enabled = value;
+
+            if (enabled) {
+
+                toggle.style.background =
+                    "#00c878";
+
+                toggle.style.boxShadow =
+                    "0 0 8px rgba(0,200,120,.35)";
+
+                knob.style.transform =
+                    "translateX(18px)";
+
+                knob.style.background =
+                    "#fff";
+
+            } else {
+
+                toggle.style.background =
+                    "#3a3a40";
+
+                toggle.style.boxShadow =
+                    "none";
+
+                knob.style.transform =
+                    "translateX(0)";
+
+                knob.style.background =
+                    "#aaa";
+            }
+
+            callback(enabled);
+        }
+
+        toggle.onclick = () => {
+            setToggle(!enabled);
+        };
+
+        row.append(label, toggle);
+
+        parent.appendChild(row);
+
+        return {
+            element: toggle,
+            set: setToggle
+        };
+    }
+
+    // =========================
+    // MAIN TOGGLES
+    // =========================
+
+    createToggle(
+        mainPage,
+        "God Mode",
+        enabled => {
+
+            godMode = enabled;
+
+            Runner.prototype.gameOver =
+                enabled
+                    ? function() {}
+                    : originalGameOver;
+        }
+    );
+
+    createToggle(
+        mainPage,
+        "Pause Game",
+        enabled => {
+            playingIntro = enabled;
+
+            const runner =
+                Runner.instance_ ||
+                Runner.getInstance();
+
+            if (runner) {
+                runner.playingIntro = enabled;
+            }
+        }
+    );
+
+    createToggle(
+        mainPage,
+        "Infinite Jump",
+        enabled => {
+
+            infiniteJump = enabled;
+        }
+    );
+
+    createToggle(
+        mainPage,
+        "Speed Boost",
+        enabled => {
+
+            speedBoost = enabled;
+
+            if (window.myDinoRunner) {
+                window.myDinoRunner.setSpeed(
+                    enabled ? speedValue : 6
+                );
+            }
+        }
+    );
+
+    // =========================
+    // SPEED SLIDER
+    // =========================
+
+    const speedLabel =
+        document.createElement("div");
+
+    speedLabel.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        margin-top: 12px;
+        margin-bottom: 5px;
+        font-size: 13px;
+    `;
+
+    const speedText =
+        document.createElement("span");
+
+    speedText.textContent = "Speed";
+
+    const speedNumber =
+        document.createElement("span");
+
+    speedNumber.textContent =
+        String(speedValue);
+
+    speedNumber.style.color =
+        "#00ff88";
+
+    speedLabel.append(
+        speedText,
+        speedNumber
+    );
+
+    mainPage.appendChild(speedLabel);
+
+    const slider =
+        document.createElement("input");
+
+    slider.type = "range";
+    slider.min = "1";
+    slider.max = "100";
+    slider.value =
+        String(speedValue);
+
+    slider.style.cssText = `
+        width: 100%;
+        height: 18px;
+        margin: 0 0 12px;
+        cursor: pointer;
+        accent-color: #00d982;
+    `;
+
+    slider.oninput = () => {
+
+        speedValue =
+            Number(slider.value);
+
+        speedNumber.textContent =
+            String(speedValue);
+
+        if (
+            speedBoost &&
+            window.myDinoRunner
+        ) {
+
+            window.myDinoRunner.setSpeed(
+                speedValue
+            );
+        }
+    };
+
+    mainPage.appendChild(slider);
+
+	createToggle(mainPage, "Float", enabled => {
+		floatEnabled = enabled;
+	});
+
+    // =========================
+    // SETTINGS TOGGLE
+    // =========================
+
+    createToggle(
+        settingsPage,
+        "Stop BG Cycle",
+        enabled => {
+            stopBgCycle = enabled;
+
+            if (enabled) {
+                // Disable future background inversion
+                Runner.prototype.invert = function() {};
+
+                // Immediately make the current background dark
+                const runner =
+                    Runner.instance_ ||
+                    Runner.getInstance();
+
+                if (runner) {
+                    originalInvert.call(runner, false);
+                }
+
+            } else {
+                // Restore the original background-cycle function
+                Runner.prototype.invert = originalInvert;
+            }
+        }
+    );
+
+    // =========================
+    // FLOAT SPEED
+    // =========================
+
+    const floatTitle =
+        document.createElement("div");
+
+    floatTitle.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+        margin-bottom: 6px;
+        color: white;
+        font-size: 13px;
+    `;
+
+    const floatText =
+        document.createElement("span");
+
+    floatText.textContent =
+        "Float Speed";
+
+    const floatNumber =
+        document.createElement("span");
+
+    floatNumber.textContent =
+        String(floatSpeed);
+
+    floatNumber.style.color =
+        "#00ff88";
+
+    floatTitle.append(
+        floatText,
+        floatNumber
+    );
+
+    settingsPage.appendChild(
+        floatTitle
+    );
+
+    const floatSlider =
+        document.createElement("input");
+
+    floatSlider.type = "range";
+    floatSlider.min = "1";
+    floatSlider.max = "30";
+    floatSlider.value =
+        String(floatSpeed);
+
+    floatSlider.style.cssText = `
+        width: 100%;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #00d982;
+    `;
+
+    floatSlider.oninput = () => {
+
+        floatSpeed =
+            Number(floatSlider.value);
+
+        floatNumber.textContent =
+            String(floatSpeed);
+    };
+
+    settingsPage.appendChild(
+        floatSlider
+    );
+
+    const settingsText =
+        document.createElement("div");
+
+    settingsText.textContent =
+        "Controls how quickly Float moves vertically.";
+
+    settingsText.style.cssText = `
+        margin-top: 12px;
+        color: #888;
+        font-size: 11px;
+        line-height: 1.4;
+    `;
+
+    settingsPage.appendChild(
+        settingsText
+    );
+
+    // =========================
+    // INFO PAGE
+    // =========================
+
+	const infoTitle = document.createElement("div");
+
+	infoTitle.textContent = "How to use";
+
+	infoTitle.style.cssText = `
+		color: #00ff88;
+		font-size: 14px;
+		font-weight: bold;
+		margin-bottom: 10px;
+	`;
+
+	infoPage.appendChild(infoTitle);
+
+
+	const infoText = document.createElement("div");
+
+	infoText.innerHTML = `
+		<div style="
+			height: 1px;
+			background: #00ff88;
+			margin: 12px 0;
+		"></div>
+
+		<div style="margin-bottom:8px">
+			• <b>God Mode</b> makes you invincible.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• <b>Pause Game</b> stops your game.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• <b>Infinite Jump</b> allows repeated jumps.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• <b>Speed Boost</b> changes game speed.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• <b>Float</b> allows you to fly.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• <b>Set Score</b> allows you to change your score.
+		</div>
+	`;
+
+	infoText.style.cssText = `
+		color: #ccc;
+		font-size: 12px;
+		line-height: 1.35;
+	`;
+
+	infoText.querySelectorAll("b").forEach(b => {
+		b.style.color = "#00ff88";
+	});
+
+	infoPage.appendChild(infoText);
+
+
+	const infoTitle2 = document.createElement("div");
+
+	infoTitle2.textContent = "Float Controls";
+
+	infoTitle2.style.cssText = `
+		color: #00ff88;
+		font-size: 14px;
+		font-weight: bold;
+		margin-top: 18px;
+		margin-bottom: 10px;
+	`;
+
+	infoPage.appendChild(infoTitle2);
+
+
+	const floatInfo = document.createElement("div");
+
+	floatInfo.innerHTML = `
+		<div style="
+			height: 1px;
+			background: #00ff88;
+			margin: 12px 0;
+		"></div>
+
+		<div style="margin-bottom:8px">
+			• Hold <b>E</b> to go up.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• Hold <b>Q</b> to go down.
+		</div>
+
+		<div style="margin-bottom:8px">
+			• Go to <b>Settings</b> to change Float Speed.
+		</div>
+	`;
+
+	floatInfo.style.cssText = `
+		color: #ccc;
+		font-size: 12px;
+		line-height: 1.35;
+	`;
+
+	floatInfo.querySelectorAll("b").forEach(b => {
+		b.style.color = "#00ff88";
+	});
+
+	infoPage.appendChild(floatInfo);
+
+    // =========================
+    // BACK BUTTONS
+    // =========================
+
+    function backButton() {
+
+        const button =
+            document.createElement("button");
+
+        button.textContent =
+            "← Back";
+
+        button.style.cssText = `
+            width: 100%;
+            height: 32px;
+            margin-top: 14px;
+            padding: 0;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #242429;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 12px;
+        `;
+
+        button.onclick = () => {
+            changePage(0);
+        };
+
+        return button;
+    }
+
+    settingsPage.appendChild(
+        backButton()
+    );
+
+    infoPage.appendChild(
+        backButton()
+    );
+
+    // =========================
+    // MINIMIZE
+    // =========================
+
+    minimizeButton.onclick = e => {
+
+        e.stopPropagation();
+
+        minimized = !minimized;
+
+        if (minimized) {
+
+            viewport.style.height =
+                "0px";
+
+            viewport.style.opacity =
+                "0";
+
+            minimizeButton.textContent =
+                "+";
+
+        } else {
+
+            viewport.style.opacity =
+                "1";
+
+            minimizeButton.textContent =
+                "−";
+
+            requestAnimationFrame(() => {
+                resizeToPage();
+            });
+        }
+    };
+
+    // =========================
+    // DRAGGING
+    // =========================
+
+    let dragging = false;
+
+    let targetX = 40;
+    let targetY = 40;
+
+    let currentX = 40;
+    let currentY = 40;
+
+    let offsetX = 0;
+    let offsetY = 0;
+
+    header.addEventListener(
+        "mousedown",
+        e => {
+
+            if (
+                e.target.closest("button")
+            ) {
+                return;
+            }
+
+            dragging = true;
+
+            const rect =
+                gui.getBoundingClientRect();
+
+            offsetX =
+                e.clientX - rect.left;
+
+            offsetY =
+                e.clientY - rect.top;
+
+            e.preventDefault();
+        }
+    );
+
+    window.addEventListener(
+        "mousemove",
+        e => {
+
+            if (!dragging)
+                return;
+
+            targetX =
+                e.clientX - offsetX;
+
+            targetY =
+                e.clientY - offsetY;
+        }
+    );
+
+    window.addEventListener(
+        "mouseup",
+        () => {
+
+            dragging = false;
+        }
+    );
+
+    function dragAnimation() {
+
+        currentX +=
+            (targetX - currentX) *
+            0.18;
+
+        currentY +=
+            (targetY - currentY) *
+            0.18;
+
+        gui.style.left =
+            currentX + "px";
+
+        gui.style.top =
+            currentY + "px";
+
+        requestAnimationFrame(
+            dragAnimation
+        );
+    }
+
+    dragAnimation();
+
+    // =========================
+    // SET SCORE
+    // =========================
+
+    const scoreLabel = document.createElement("div");
+
+    scoreLabel.textContent = "Set Score";
+
+    scoreLabel.style.cssText = `
+        margin-top: 4px;
+        margin-bottom: 5px;
+        font-size: 13px;
+    `;
+
+    mainPage.appendChild(scoreLabel);
+
+    const scoreRow = document.createElement("div");
+
+    scoreRow.style.cssText = `
+        display: flex;
+        gap: 6px;
+        width: 100%;
+    `;
+
+    const scoreInput = document.createElement("input");
+
+    scoreInput.type = "text";
+    scoreInput.placeholder = "Enter score";
+    scoreInput.inputMode = "numeric";
+
+    scoreInput.style.cssText = `
+        flex: 1;
+        min-width: 0;
+        width: 0;
+        height: 30px;
+        padding: 5px 8px;
+        box-sizing: border-box;
+        background: #111;
+        border: 1px solid #444;
+        border-radius: 5px;
+        color: white;
+        outline: none;
+    `;
+
+    scoreInput.oninput = () => {
+        scoreInput.value =
+            scoreInput.value.replace(/[^0-9]/g, "");
+    };
+
+    const scoreButton = document.createElement("button");
+
+    scoreButton.textContent = "Set";
+
+    scoreButton.style.cssText = `
+        flex: 0 0 48px;
+        width: 48px;
+        height: 30px;
+        border: none;
+        border-radius: 5px;
+        background: #00c878;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        white-space: nowrap;
+    `;
+
+    scoreButton.onclick = () => {
+
+        const value =
+            parseInt(scoreInput.value, 10);
+
+        if (!Number.isFinite(value) || value < 0)
+            return;
+
+        const runner =
+            Runner.instance_ ||
+            Runner.getInstance();
+
+        if (!runner)
+            return;
+
+        scoreValue = value;
+        scoreLocked = true;
+
+        runner.distanceRan =
+            scoreValue / 0.025;
+
+        console.log(
+            "Score set to:",
+            scoreValue
+        );
+    };
+
+    scoreRow.append(
+        scoreInput,
+        scoreButton
+    );
+
+    mainPage.appendChild(scoreRow);
+
+    // =========================
+    // FLOAT CONTROLS
+    // =========================
+
+    let eHeld = false;
+    let qHeld = false;
+
+    window.addEventListener(
+        "keydown",
+        e => {
+
+            if (e.code === "KeyE")
+                eHeld = true;
+
+            if (e.code === "KeyQ")
+                qHeld = true;
+        }
+    );
+
+    window.addEventListener(
+        "keyup",
+        e => {
+
+            if (e.code === "KeyE")
+                eHeld = false;
+
+            if (e.code === "KeyQ")
+                qHeld = false;
+        }
+    );
+
+    function floatLoop() {
+
+        if (
+            floatEnabled &&
+            window.myDinoRunner?.tRex
+        ) {
+
+            const rex =
+                window.myDinoRunner.tRex;
+
+            if (eHeld)
+                rex.yPos -= floatSpeed;
+
+            if (qHeld)
+                rex.yPos += floatSpeed;
+        }
+
+        requestAnimationFrame(
+            floatLoop
+        );
+    }
+
+    floatLoop();
+
+    // =========================
+    // RUNNER HOOK
+    // =========================
+
+    Runner.prototype.onKeyDown =
+        function(e) {
+
+            window.myDinoRunner = this;
+
+            if (
+                infiniteJump &&
+                e instanceof KeyboardEvent &&
+                runnerKeycodes.jump.includes(
+                    e.keyCode
+                ) &&
+                !this.crashed &&
+                !this.paused &&
+                this.tRex?.jumping
+            ) {
+
+                this.tRex.jumping = false;
+            }
+
+            return originalOnKeyDown.call(
+                this,
+                e
+            );
+        };
+
+    // =========================
+    // ADD GUI
+    // =========================
+
+    document.body.appendChild(gui);
+
+    requestAnimationFrame(() => {
+
+        resizeToPage();
+        updateHeaderButtons();
+    });
+
+    console.log(
+        "🦖 Dino Cheat Engine loaded!"
+    );
+})();
