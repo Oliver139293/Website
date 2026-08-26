@@ -737,9 +737,7 @@ Library.__index = Library
 function Library.new(title)
 
     local self = setmetatable({}, Library)
-
-    local player = Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
+    local CoreGui = game:GetService("CoreGui")
 
     --=====================================================================
     -- SCREEN GUI
@@ -749,7 +747,7 @@ function Library.new(title)
         Name = "SimpleUILibrary",
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        Parent = playerGui,
+        Parent = CoreGui,
     })
 
     --=====================================================================
