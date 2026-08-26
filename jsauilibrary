@@ -23,12 +23,15 @@ local Theme = {
 --=========================================================================
 local function Create(class, props, children)
     local inst = Instance.new(class)
+
     for k, v in pairs(props or {}) do
         inst[k] = v
     end
+
     for _, c in ipairs(children or {}) do
         c.Parent = inst
     end
+
     return inst
 end
 
@@ -39,7 +42,9 @@ local function MakeDraggable(dragHandle, frame)
     local startPos
 
     dragHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
@@ -53,7 +58,9 @@ local function MakeDraggable(dragHandle, frame)
     end)
 
     dragHandle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+
             dragInput = input
         end
     end)
@@ -61,16 +68,19 @@ local function MakeDraggable(dragHandle, frame)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
+
             frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
             )
         end
     end)
 end
 
 --=========================================================================
--- FORWARD DECLARATIONS (mutual recursion for nested dropdowns)
+-- FORWARD DECLARATIONS
 --=========================================================================
 local AttachElementFunctions
 local CreateToggleElement
@@ -81,6 +91,7 @@ local CreateDropdownElement
 -- TOGGLE ELEMENT
 --=========================================================================
 CreateToggleElement = function(parentFrame, text, default, callback)
+
     local state = default == true
 
     local Holder = Create("Frame", {
@@ -89,7 +100,9 @@ CreateToggleElement = function(parentFrame, text, default, callback)
         BorderSizePixel = 0,
         Parent = parentFrame,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
     })
 
     Create("TextLabel", {
@@ -111,17 +124,23 @@ CreateToggleElement = function(parentFrame, text, default, callback)
         BorderSizePixel = 0,
         Parent = Holder,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(1, 0)
+        }),
     })
 
     local Knob = Create("Frame", {
         Size = UDim2.new(0, 12, 0, 12),
-        Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6),
+        Position = state
+            and UDim2.new(1, -14, 0.5, -6)
+            or UDim2.new(0, 2, 0.5, -6),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         Parent = SwitchBG,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(1, 0)
+        }),
     })
 
     local Click = Create("TextButton", {
@@ -132,13 +151,29 @@ CreateToggleElement = function(parentFrame, text, default, callback)
     })
 
     local function SetState(newState)
+
         state = newState
-        TweenService:Create(SwitchBG, TweenInfo.new(0.15), {
-            BackgroundColor3 = state and Theme.Accent or Theme.SwitchOff,
-        }):Play()
-        TweenService:Create(Knob, TweenInfo.new(0.15), {
-            Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6),
-        }):Play()
+
+        TweenService:Create(
+            SwitchBG,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 =
+                    state and Theme.Accent or Theme.SwitchOff
+            }
+        ):Play()
+
+        TweenService:Create(
+            Knob,
+            TweenInfo.new(0.15),
+            {
+                Position =
+                    state
+                    and UDim2.new(1, -14, 0.5, -6)
+                    or UDim2.new(0, 2, 0.5, -6)
+            }
+        ):Play()
+
         if callback then
             callback(state)
         end
@@ -151,7 +186,9 @@ CreateToggleElement = function(parentFrame, text, default, callback)
     return {
         Instance = Holder,
         Set = SetState,
-        Get = function() return state end,
+        Get = function()
+            return state
+        end,
     }
 end
 
@@ -159,6 +196,7 @@ end
 -- BUTTON ELEMENT
 --=========================================================================
 CreateButtonElement = function(parentFrame, text, callback)
+
     local Holder = Create("TextButton", {
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundColor3 = Theme.ElementBG,
@@ -167,7 +205,9 @@ CreateButtonElement = function(parentFrame, text, callback)
         BorderSizePixel = 0,
         Parent = parentFrame,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
     })
 
     Create("TextLabel", {
@@ -182,39 +222,94 @@ CreateButtonElement = function(parentFrame, text, callback)
         Parent = Holder,
     })
 
+    Holder.MouseEnter:Connect(function()
+        TweenService:Create(
+            Holder,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            }
+        ):Play()
+    end)
+
+    Holder.MouseLeave:Connect(function()
+        TweenService:Create(
+            Holder,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Theme.ElementBG
+            }
+        ):Play()
+    end)
+
     Holder.MouseButton1Click:Connect(function()
+
         if callback then
             callback()
         end
-        local flashIn = TweenService:Create(Holder, TweenInfo.new(0.1), { BackgroundColor3 = Theme.Accent })
+
+        local flashIn = TweenService:Create(
+            Holder,
+            TweenInfo.new(0.1),
+            {
+                BackgroundColor3 = Theme.Accent
+            }
+        )
+
         flashIn:Play()
+
         flashIn.Completed:Connect(function()
-            TweenService:Create(Holder, TweenInfo.new(0.15), { BackgroundColor3 = Theme.ElementBG }):Play()
+
+            TweenService:Create(
+                Holder,
+                TweenInfo.new(0.15),
+                {
+                    BackgroundColor3 = Theme.ElementBG
+                }
+            ):Play()
+
         end)
     end)
 
-    return { Instance = Holder }
+    return {
+        Instance = Holder
+    }
 end
 
 --=========================================================================
--- DROPDOWN ELEMENT (Normal + Toggle variants, fully nestable)
+-- DROPDOWN ELEMENT
 --=========================================================================
-CreateDropdownElement = function(parentFrame, text, isToggleType, default, callback)
+CreateDropdownElement = function(
+    parentFrame,
+    text,
+    isToggleType,
+    default,
+    callback
+)
+
     local expanded = false
 
     local Container = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(1, 0, 0, 26),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = Theme.ElementBG,
         BorderSizePixel = 0,
         Parent = parentFrame,
+        ClipsDescendants = true,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
+
         Create("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 0),
         }),
     })
+
+    --=====================================================================
+    -- HEADER
+    --=====================================================================
 
     local Header = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 26),
@@ -223,7 +318,10 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
         Parent = Container,
     })
 
-    -- Expand / Collapse button ( + / - )
+    --=====================================================================
+    -- EXPAND BUTTON
+    --=====================================================================
+
     local ExpandBtn = Create("TextButton", {
         Size = UDim2.new(0, 18, 0, 18),
         Position = UDim2.new(0, 5, 0.5, -9),
@@ -235,10 +333,15 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
         TextColor3 = Theme.Text,
         Parent = Header,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
     })
 
-    -- Reserve space on the right for the toggle switch if this is a Toggle Dropdown
+    --=====================================================================
+    -- TITLE
+    --=====================================================================
+
     local titleRightPad = isToggleType and 90 or 40
 
     Create("TextLabel", {
@@ -247,7 +350,12 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
         TextSize = 13,
         TextColor3 = Theme.Text,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -(28 + titleRightPad), 1, 0),
+        Size = UDim2.new(
+            1,
+            -(28 + titleRightPad),
+            1,
+            0
+        ),
         Position = UDim2.new(0, 28, 0, 0),
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = Header,
@@ -255,28 +363,40 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
 
     local dropdownObj = {}
 
-    -- Master [Toggle] switch, only for Toggle Dropdown type
+    --=====================================================================
+    -- MASTER TOGGLE
+    --=====================================================================
+
     if isToggleType then
+
         local state = default == true
 
         local SwitchBG = Create("Frame", {
             Size = UDim2.new(0, 32, 0, 16),
             Position = UDim2.new(1, -40, 0.5, -8),
-            BackgroundColor3 = state and Theme.Accent or Theme.SwitchOff,
+            BackgroundColor3 =
+                state and Theme.Accent or Theme.SwitchOff,
             BorderSizePixel = 0,
             Parent = Header,
         }, {
-            Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+            Create("UICorner", {
+                CornerRadius = UDim.new(1, 0)
+            }),
         })
 
         local Knob = Create("Frame", {
             Size = UDim2.new(0, 12, 0, 12),
-            Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6),
+            Position =
+                state
+                and UDim2.new(1, -14, 0.5, -6)
+                or UDim2.new(0, 2, 0.5, -6),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
             Parent = SwitchBG,
         }, {
-            Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+            Create("UICorner", {
+                CornerRadius = UDim.new(1, 0)
+            }),
         })
 
         local SwitchClick = Create("TextButton", {
@@ -288,13 +408,29 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
         })
 
         local function SetState(newState)
+
             state = newState
-            TweenService:Create(SwitchBG, TweenInfo.new(0.15), {
-                BackgroundColor3 = state and Theme.Accent or Theme.SwitchOff,
-            }):Play()
-            TweenService:Create(Knob, TweenInfo.new(0.15), {
-                Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6),
-            }):Play()
+
+            TweenService:Create(
+                SwitchBG,
+                TweenInfo.new(0.15),
+                {
+                    BackgroundColor3 =
+                        state and Theme.Accent or Theme.SwitchOff
+                }
+            ):Play()
+
+            TweenService:Create(
+                Knob,
+                TweenInfo.new(0.15),
+                {
+                    Position =
+                        state
+                        and UDim2.new(1, -14, 0.5, -6)
+                        or UDim2.new(0, 2, 0.5, -6)
+                }
+            ):Play()
+
             if callback then
                 callback(state)
             end
@@ -306,23 +442,30 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
 
         dropdownObj.Toggle = {
             Set = SetState,
-            Get = function() return state end,
+
+            Get = function()
+                return state
+            end,
         }
     end
 
-    -- Inner content (indented, holds nested elements; collapsed by default)
+    --=====================================================================
+    -- INNER CONTENT
+    --=====================================================================
+
     local Inner = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         Visible = false,
         LayoutOrder = 2,
         Parent = Container,
+        ClipsDescendants = true,
     }, {
         Create("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 4),
         }),
+
         Create("UIPadding", {
             PaddingLeft = UDim.new(0, 14),
             PaddingRight = UDim.new(0, 4),
@@ -331,41 +474,257 @@ CreateDropdownElement = function(parentFrame, text, isToggleType, default, callb
         }),
     })
 
-    ExpandBtn.MouseButton1Click:Connect(function()
-        expanded = not expanded
-        Inner.Visible = expanded
-        ExpandBtn.Text = expanded and "-" or "+"
+    local InnerLayout = Inner:FindFirstChildOfClass("UIListLayout")
+    local InnerPadding = Inner:FindFirstChildOfClass("UIPadding")
+
+    --=====================================================================
+    -- DROPDOWN ANIMATION
+    --=====================================================================
+
+    local dropdownTweenInfo = TweenInfo.new(
+        0.25,
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.Out
+    )
+
+    local function GetInnerHeight()
+
+        if not InnerLayout then
+            return 0
+        end
+
+        local contentHeight =
+            InnerLayout.AbsoluteContentSize.Y
+
+        if InnerPadding then
+            contentHeight =
+                contentHeight
+                + InnerPadding.PaddingTop.Offset
+                + InnerPadding.PaddingBottom.Offset
+        end
+
+        return contentHeight
+    end
+
+    local function UpdateInnerSize(animated)
+
+        local targetHeight = GetInnerHeight()
+
+        local targetSize =
+            UDim2.new(
+                1,
+                0,
+                0,
+                targetHeight
+            )
+
+        if animated then
+
+            TweenService:Create(
+                Inner,
+                dropdownTweenInfo,
+                {
+                    Size = targetSize
+                }
+            ):Play()
+
+        else
+
+            Inner.Size = targetSize
+
+        end
+    end
+
+    --=====================================================================
+    -- EXPAND / COLLAPSE
+    --=====================================================================
+
+    ExpandBtn.MouseEnter:Connect(function()
+
+        TweenService:Create(
+            ExpandBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(58, 58, 64)
+            }
+        ):Play()
+
     end)
+
+    ExpandBtn.MouseLeave:Connect(function()
+
+        TweenService:Create(
+            ExpandBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(46, 46, 51)
+            }
+        ):Play()
+
+    end)
+
+    ExpandBtn.MouseButton1Click:Connect(function()
+
+        expanded = not expanded
+
+        if expanded then
+
+            -- Show before calculating its content size
+            Inner.Visible = true
+
+            Inner.Size = UDim2.new(
+                1,
+                0,
+                0,
+                0
+            )
+
+            UpdateInnerSize(true)
+
+            ExpandBtn.Text = "−"
+
+            -- Small button animation
+            TweenService:Create(
+                ExpandBtn,
+                TweenInfo.new(
+                    0.15,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size = UDim2.new(0, 19, 0, 19),
+                    Position = UDim2.new(0, 4.5, 0.5, -9.5)
+                }
+            ):Play()
+
+        else
+
+            local closeTween = TweenService:Create(
+                Inner,
+                dropdownTweenInfo,
+                {
+                    Size = UDim2.new(
+                        1,
+                        0,
+                        0,
+                        0
+                    )
+                }
+            )
+
+            closeTween:Play()
+
+            closeTween.Completed:Connect(function()
+
+                if not expanded then
+                    Inner.Visible = false
+                end
+
+            end)
+
+            ExpandBtn.Text = "+"
+
+            TweenService:Create(
+                ExpandBtn,
+                TweenInfo.new(
+                    0.15,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size = UDim2.new(0, 18, 0, 18),
+                    Position = UDim2.new(0, 5, 0.5, -9)
+                }
+            ):Play()
+
+        end
+    end)
+
+    --=====================================================================
+    -- UPDATE WHEN NESTED CONTENT CHANGES SIZE
+    --=====================================================================
+
+    if InnerLayout then
+
+        InnerLayout:GetPropertyChangedSignal(
+            "AbsoluteContentSize"
+        ):Connect(function()
+
+            if expanded then
+                UpdateInnerSize(false)
+            end
+
+        end)
+
+    end
+
+    --=====================================================================
+    -- RETURN DROPDOWN
+    --=====================================================================
 
     dropdownObj.Instance = Container
     dropdownObj.Inner = Inner
 
-    -- Allows nesting: dropdown:CreateToggle / :CreateButton / :CreateDropdown / :CreateToggleDropdown
-    AttachElementFunctions(dropdownObj, Inner)
+    AttachElementFunctions(
+        dropdownObj,
+        Inner
+    )
 
     return dropdownObj
 end
 
 --=========================================================================
--- ATTACH ELEMENT-CREATION METHODS TO ANY CONTAINER (Tab or Dropdown)
+-- ATTACH ELEMENT CREATION METHODS
 --=========================================================================
 AttachElementFunctions = function(obj, parentFrame)
+
     function obj:CreateToggle(text, default, callback)
-        return CreateToggleElement(parentFrame, text, default, callback)
+
+        return CreateToggleElement(
+            parentFrame,
+            text,
+            default,
+            callback
+        )
+
     end
 
     function obj:CreateButton(text, callback)
-        return CreateButtonElement(parentFrame, text, callback)
+
+        return CreateButtonElement(
+            parentFrame,
+            text,
+            callback
+        )
+
     end
 
-    -- Normal Dropdown: expand/collapse only, no master switch
     function obj:CreateDropdown(text)
-        return CreateDropdownElement(parentFrame, text, false, nil, nil)
+
+        return CreateDropdownElement(
+            parentFrame,
+            text,
+            false,
+            nil,
+            nil
+        )
+
     end
 
-    -- Toggle Dropdown: has its own [Toggle] switch AND expand/collapse
-    function obj:CreateToggleDropdown(text, default, callback)
-        return CreateDropdownElement(parentFrame, text, true, default, callback)
+    function obj:CreateToggleDropdown(
+        text,
+        default,
+        callback
+    )
+
+        return CreateDropdownElement(
+            parentFrame,
+            text,
+            true,
+            default,
+            callback
+        )
+
     end
 end
 
@@ -376,10 +735,15 @@ local Library = {}
 Library.__index = Library
 
 function Library.new(title)
+
     local self = setmetatable({}, Library)
 
     local player = Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
+
+    --=====================================================================
+    -- SCREEN GUI
+    --=====================================================================
 
     local ScreenGui = Create("ScreenGui", {
         Name = "SimpleUILibrary",
@@ -388,17 +752,48 @@ function Library.new(title)
         Parent = playerGui,
     })
 
+    --=====================================================================
+    -- MAIN WINDOW
+    --=====================================================================
+
     local Main = Create("Frame", {
         Name = "Main",
-        Size = UDim2.new(0, 460, 0, 300),
-        Position = UDim2.new(0.5, -230, 0.5, -150),
+
+        Size = UDim2.new(
+            0,
+            460,
+            0,
+            300
+        ),
+
+        Position = UDim2.new(
+            0.5,
+            -230,
+            0.5,
+            -150
+        ),
+
         BackgroundColor3 = Theme.Background,
         BorderSizePixel = 0,
+
+        -- Needed for the minimize animation
+        ClipsDescendants = true,
+
         Parent = ScreenGui,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
-        Create("UIStroke", { Color = Theme.Stroke, Thickness = 1 }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 6)
+        }),
+
+        Create("UIStroke", {
+            Color = Theme.Stroke,
+            Thickness = 1
+        }),
     })
+
+    --=====================================================================
+    -- TITLE BAR
+    --=====================================================================
 
     local TitleBar = Create("Frame", {
         Name = "TitleBar",
@@ -407,10 +802,12 @@ function Library.new(title)
         BorderSizePixel = 0,
         Parent = Main,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 6)
+        }),
     })
 
-    -- Patch bottom corners of the title bar so it looks square against content below
+    -- Patch bottom corners of title bar
     Create("Frame", {
         Size = UDim2.new(1, 0, 0, 6),
         Position = UDim2.new(0, 0, 1, -6),
@@ -419,17 +816,58 @@ function Library.new(title)
         Parent = TitleBar,
     })
 
+    --=====================================================================
+    -- TITLE
+    --=====================================================================
+
     Create("TextLabel", {
         Text = title or "Window",
         Font = Theme.FontBold,
         TextSize = 14,
         TextColor3 = Theme.Text,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
+
+        Size = UDim2.new(
+            1,
+            -100,
+            1,
+            0
+        ),
+
+        Position = UDim2.new(
+            0,
+            12,
+            0,
+            0
+        ),
+
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = TitleBar,
     })
+
+    --=====================================================================
+    -- MINIMIZE BUTTON
+    --=====================================================================
+
+    local MinimizeBtn = Create("TextButton", {
+        Size = UDim2.new(0, 22, 0, 22),
+        Position = UDim2.new(1, -54, 0.5, -11),
+        BackgroundColor3 = Color3.fromRGB(45, 45, 50),
+        AutoButtonColor = false,
+        Text = "−",
+        Font = Theme.FontBold,
+        TextSize = 16,
+        TextColor3 = Theme.SubText,
+        Parent = TitleBar,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
+    })
+
+    --=====================================================================
+    -- CLOSE BUTTON
+    --=====================================================================
 
     local CloseBtn = Create("TextButton", {
         Size = UDim2.new(0, 22, 0, 22),
@@ -442,15 +880,151 @@ function Library.new(title)
         TextColor3 = Theme.SubText,
         Parent = TitleBar,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
     })
+
+    --=====================================================================
+    -- BUTTON HOVER EFFECTS
+    --=====================================================================
+
+    MinimizeBtn.MouseEnter:Connect(function()
+
+        TweenService:Create(
+            MinimizeBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Theme.ElementBG,
+                TextColor3 = Theme.Text
+            }
+        ):Play()
+
+    end)
+
+    MinimizeBtn.MouseLeave:Connect(function()
+
+        TweenService:Create(
+            MinimizeBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50),
+                TextColor3 = Theme.SubText
+            }
+        ):Play()
+
+    end)
+
+    CloseBtn.MouseEnter:Connect(function()
+
+        TweenService:Create(
+            CloseBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(170, 60, 60),
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }
+        ):Play()
+
+    end)
+
+    CloseBtn.MouseLeave:Connect(function()
+
+        TweenService:Create(
+            CloseBtn,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50),
+                TextColor3 = Theme.SubText
+            }
+        ):Play()
+
+    end)
+
+    --=====================================================================
+    -- CLOSE
+    --=====================================================================
+
     CloseBtn.MouseButton1Click:Connect(function()
         ScreenGui.Enabled = false
     end)
 
-    MakeDraggable(TitleBar, Main)
+    --=====================================================================
+    -- MINIMIZE / RESTORE
+    --=====================================================================
 
-    -- Tab bar (left, thin)
+    local minimized = false
+
+    local NormalSize = UDim2.new(
+        0,
+        460,
+        0,
+        300
+    )
+
+    local MinimizedSize = UDim2.new(
+        0,
+        460,
+        0,
+        32
+    )
+
+    local MinimizeTweenInfo = TweenInfo.new(
+        0.3,
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.Out
+    )
+
+    local function SetMinimized(state)
+
+        minimized = state
+
+        if minimized then
+
+            MinimizeBtn.Text = "+"
+
+            TweenService:Create(
+                Main,
+                MinimizeTweenInfo,
+                {
+                    Size = MinimizedSize
+                }
+            ):Play()
+
+        else
+
+            MinimizeBtn.Text = "−"
+
+            TweenService:Create(
+                Main,
+                MinimizeTweenInfo,
+                {
+                    Size = NormalSize
+                }
+            ):Play()
+
+        end
+    end
+
+    MinimizeBtn.MouseButton1Click:Connect(function()
+
+        SetMinimized(not minimized)
+
+    end)
+
+    --=====================================================================
+    -- DRAGGING
+    --=====================================================================
+
+    MakeDraggable(
+        TitleBar,
+        Main
+    )
+
+    --=====================================================================
+    -- TAB BAR
+    --=====================================================================
+
     local TabBar = Create("Frame", {
         Name = "TabBar",
         Size = UDim2.new(0, 110, 1, -32),
@@ -463,6 +1037,7 @@ function Library.new(title)
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 2),
         }),
+
         Create("UIPadding", {
             PaddingTop = UDim.new(0, 6),
             PaddingLeft = UDim.new(0, 4),
@@ -470,7 +1045,10 @@ function Library.new(title)
         }),
     })
 
-    -- Content area
+    --=====================================================================
+    -- CONTENT AREA
+    --=====================================================================
+
     local ContentArea = Create("Frame", {
         Name = "ContentArea",
         Size = UDim2.new(1, -110, 1, -32),
@@ -479,6 +1057,10 @@ function Library.new(title)
         BorderSizePixel = 0,
         Parent = Main,
     })
+
+    --=====================================================================
+    -- LIBRARY DATA
+    --=====================================================================
 
     self.ScreenGui = ScreenGui
     self.Main = Main
@@ -490,17 +1072,37 @@ function Library.new(title)
     return self
 end
 
+--=========================================================================
+-- SELECT TAB
+--=========================================================================
 function Library:SelectTab(tab)
+
     for _, t in ipairs(self.Tabs) do
+
         local isActive = (t == tab)
+
         t.Content.Visible = isActive
-        t.Button.BackgroundColor3 = isActive and Theme.Accent or Theme.Secondary
-        t.Button.TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or Theme.SubText
+
+        t.Button.BackgroundColor3 =
+            isActive
+            and Theme.Accent
+            or Theme.Secondary
+
+        t.Button.TextColor3 =
+            isActive
+            and Color3.fromRGB(255, 255, 255)
+            or Theme.SubText
+
     end
+
     self.ActiveTab = tab
 end
 
+--=========================================================================
+-- CREATE TAB
+--=========================================================================
 function Library:CreateTab(name)
+
     local TabButton = Create("TextButton", {
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundColor3 = Theme.Secondary,
@@ -511,8 +1113,55 @@ function Library:CreateTab(name)
         TextColor3 = Theme.SubText,
         Parent = self.TabBar,
     }, {
-        Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
     })
+
+    -- Tab hover
+    TabButton.MouseEnter:Connect(function()
+
+        if self.ActiveTab then
+            if self.ActiveTab.Button ~= TabButton then
+
+                TweenService:Create(
+                    TabButton,
+                    TweenInfo.new(0.15),
+                    {
+                        BackgroundColor3 =
+                            Color3.fromRGB(40, 40, 45)
+                    }
+                ):Play()
+
+            end
+        end
+
+    end)
+
+    TabButton.MouseLeave:Connect(function()
+
+        if self.ActiveTab ~= nil then
+
+            if self.ActiveTab.Button ~= TabButton then
+
+                TweenService:Create(
+                    TabButton,
+                    TweenInfo.new(0.15),
+                    {
+                        BackgroundColor3 =
+                            Theme.Secondary
+                    }
+                ):Play()
+
+            end
+
+        end
+
+    end)
+
+    --=====================================================================
+    -- TAB CONTENT
+    --=====================================================================
 
     local TabContent = Create("ScrollingFrame", {
         Size = UDim2.new(1, 0, 1, 0),
@@ -529,6 +1178,7 @@ function Library:CreateTab(name)
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 6),
         }),
+
         Create("UIPadding", {
             PaddingTop = UDim.new(0, 8),
             PaddingLeft = UDim.new(0, 8),
@@ -537,18 +1187,36 @@ function Library:CreateTab(name)
         }),
     })
 
+    --=====================================================================
+    -- TAB OBJECT
+    --=====================================================================
+
     local Tab = {
         Button = TabButton,
         Content = TabContent,
     }
 
+    --=====================================================================
+    -- TAB CLICK
+    --=====================================================================
+
     TabButton.MouseButton1Click:Connect(function()
+
         self:SelectTab(Tab)
+
     end)
 
-    table.insert(self.Tabs, Tab)
-    AttachElementFunctions(Tab, TabContent)
+    table.insert(
+        self.Tabs,
+        Tab
+    )
 
+    AttachElementFunctions(
+        Tab,
+        TabContent
+    )
+
+    -- Select first tab automatically
     if not self.ActiveTab then
         self:SelectTab(Tab)
     end
@@ -556,8 +1224,13 @@ function Library:CreateTab(name)
     return Tab
 end
 
+--=========================================================================
+-- DESTROY
+--=========================================================================
 function Library:Destroy()
+
     self.ScreenGui:Destroy()
+
 end
 
 return Library
