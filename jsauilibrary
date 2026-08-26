@@ -86,6 +86,7 @@ local AttachElementFunctions
 local CreateToggleElement
 local CreateButtonElement
 local CreateDropdownElement
+local CreateSliderElement
 
 --=========================================================================
 -- TOGGLE ELEMENT
@@ -273,6 +274,285 @@ CreateButtonElement = function(parentFrame, text, callback)
 
     return {
         Instance = Holder
+    }
+end
+
+--=========================================================================
+-- SLIDER ELEMENT
+--=========================================================================
+CreateSliderElement = function(parentFrame, text, minValue, maxValue, defaultValue, callback)
+
+    minValue = tonumber(minValue) or 0
+    maxValue = tonumber(maxValue) or 100
+    defaultValue = tonumber(defaultValue) or minValue
+
+    if minValue > maxValue then
+        minValue, maxValue = maxValue, minValue
+    end
+
+    defaultValue = math.clamp(defaultValue, minValue, maxValue)
+
+    local value = defaultValue
+
+    local Holder = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 48),
+        BackgroundColor3 = Theme.ElementBG,
+        BorderSizePixel = 0,
+        Parent = parentFrame,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 4)
+        }),
+    })
+
+    --=====================================================================
+    -- LABEL
+    --=====================================================================
+
+    local Label = Create("TextLabel", {
+        Text = text,
+        Font = Theme.Font,
+        TextSize = 13,
+        TextColor3 = Theme.Text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -70, 0, 24),
+        Position = UDim2.new(0, 10, 0, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Holder,
+    })
+
+    --=====================================================================
+    -- VALUE LABEL
+    --=====================================================================
+
+    local ValueLabel = Create("TextLabel", {
+        Text = tostring(defaultValue),
+        Font = Theme.Font,
+        TextSize = 12,
+        TextColor3 = Theme.SubText,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 50, 0, 24),
+        Position = UDim2.new(1, -60, 0, 0),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = Holder,
+    })
+
+    --=====================================================================
+    -- SLIDER BACKGROUND
+    --=====================================================================
+
+    local SliderBG = Create("Frame", {
+        Size = UDim2.new(1, -20, 0, 6),
+        Position = UDim2.new(0, 10, 0, 31),
+        BackgroundColor3 = Theme.SwitchOff,
+        BorderSizePixel = 0,
+        Parent = Holder,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(1, 0)
+        }),
+    })
+
+    --=====================================================================
+    -- SLIDER FILL
+    --=====================================================================
+
+    local percentage =
+        (defaultValue - minValue) /
+        (maxValue - minValue)
+
+    local SliderFill = Create("Frame", {
+        Size = UDim2.new(percentage, 0, 1, 0),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Parent = SliderBG,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(1, 0)
+        }),
+    })
+
+    --=====================================================================
+    -- SLIDER KNOB
+    --=====================================================================
+
+    local Knob = Create("Frame", {
+        Size = UDim2.new(0, 12, 0, 12),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(percentage, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Parent = SliderBG,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(1, 0)
+        }),
+    })
+
+    --=====================================================================
+    -- CLICK / DRAG AREA
+    --=====================================================================
+
+    local SliderButton = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 24),
+        Position = UDim2.new(0, 0, 0, 22),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = Holder,
+    })
+
+    local dragging = false
+
+    --=====================================================================
+    -- SET VALUE
+    --=====================================================================
+
+    local function SetValue(newValue)
+
+        newValue = tonumber(newValue)
+
+        if not newValue then
+            return
+        end
+
+        newValue = math.clamp(
+            newValue,
+            minValue,
+            maxValue
+        )
+
+        -- Round to nearest integer
+        newValue = math.floor(newValue + 0.5)
+
+        value = newValue
+
+        local alpha
+
+        if maxValue == minValue then
+            alpha = 0
+        else
+            alpha =
+                (value - minValue) /
+                (maxValue - minValue)
+        end
+
+        -- Animate slider
+        TweenService:Create(
+            SliderFill,
+            TweenInfo.new(
+                0.08,
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Size = UDim2.new(alpha, 0, 1, 0)
+            }
+        ):Play()
+
+        TweenService:Create(
+            Knob,
+            TweenInfo.new(
+                0.08,
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Position = UDim2.new(alpha, 0, 0.5, 0)
+            }
+        ):Play()
+
+        ValueLabel.Text = tostring(value)
+
+        if callback then
+            callback(value)
+        end
+    end
+
+    --=====================================================================
+    -- MOUSE POSITION -> VALUE
+    --=====================================================================
+
+    local function UpdateFromMouse(mouseX)
+
+        local absolutePosition = SliderBG.AbsolutePosition.X
+        local absoluteSize = SliderBG.AbsoluteSize.X
+
+        if absoluteSize <= 0 then
+            return
+        end
+
+        local alpha =
+            (mouseX - absolutePosition) /
+            absoluteSize
+
+        alpha = math.clamp(alpha, 0, 1)
+
+        local newValue =
+            minValue +
+            ((maxValue - minValue) * alpha)
+
+        SetValue(newValue)
+    end
+
+    --=====================================================================
+    -- CLICK
+    --=====================================================================
+
+    SliderButton.MouseButton1Down:Connect(function()
+
+        dragging = true
+
+        UpdateFromMouse(
+            UserInputService:GetMouseLocation().X
+        )
+
+    end)
+
+    --=====================================================================
+    -- DRAG
+    --=====================================================================
+
+    UserInputService.InputChanged:Connect(function(input)
+
+        if not dragging then
+            return
+        end
+
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+
+            UpdateFromMouse(
+                input.Position.X
+            )
+
+        end
+
+    end)
+
+    --=====================================================================
+    -- STOP DRAGGING
+    --=====================================================================
+
+    UserInputService.InputEnded:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+
+    end)
+
+    --=====================================================================
+    -- RETURN OBJECT
+    --=====================================================================
+
+    return {
+        Instance = Holder,
+
+        Set = SetValue,
+
+        Get = function()
+            return value
+        end,
     }
 end
 
@@ -694,6 +974,19 @@ AttachElementFunctions = function(obj, parentFrame)
         return CreateButtonElement(
             parentFrame,
             text,
+            callback
+        )
+
+    end
+
+    function obj:CreateSlider(text, minValue, maxValue, defaultValue, callback)
+
+        return CreateSliderElement(
+            parentFrame,
+            text,
+            minValue,
+            maxValue,
+            defaultValue,
             callback
         )
 
