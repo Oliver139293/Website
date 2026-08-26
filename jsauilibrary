@@ -746,7 +746,8 @@ function Library.new(title)
     local ScreenGui = Create("ScreenGui", {
         Name = "SimpleUILibrary",
         ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 9999,
         Parent = CoreGui,
     })
 
