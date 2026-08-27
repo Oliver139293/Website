@@ -625,7 +625,8 @@ CreateDropdownElement = function(
 	text,
 	isToggleType,
 	default,
-	callback
+	callback,
+	defaultSelection
 )
 
 	local expanded = false
@@ -1171,26 +1172,27 @@ CreateDropdownElement = function(
 
 	end
 
-	--=====================================================================
+	--=========================================================================
 	-- RETURN DROPDOWN
-	--=====================================================================
+	--=========================================================================
 
 	dropdownObj.Instance = Container
 	dropdownObj.Inner = Inner
 
-	AttachElementFunctions(
-		dropdownObj,
-		Inner,
-		SelectItem
-	)
-
 	return dropdownObj
+
 end
 
 --=========================================================================
 -- ATTACH ELEMENT CREATION METHODS
 --=========================================================================
-AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
+AttachElementFunctions = function(
+	obj,
+	parentFrame,
+	onDropdownSelected,
+	defaultSelection,
+	SelectItem
+)
 
 	function obj:CreateToggle(text, default, callback)
 
@@ -1205,13 +1207,19 @@ AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
 
 	function obj:CreateButton(text, callback)
 
-		return CreateButtonElement(
+		local button = CreateButtonElement(
 			parentFrame,
 			text,
 			callback,
 			onDropdownSelected
 		)
 
+		-- Automatically select default
+		if defaultSelection ~= nil and text == defaultSelection then
+			onDropdownSelected(text, button.Instance)
+		end
+
+		return button
 	end
 
 	function obj:CreateSlider(text, minValue, maxValue, defaultValue, callback)
@@ -1260,14 +1268,15 @@ AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
 
 	end
 
-	function obj:CreateDropdown(text)
+	function obj:CreateDropdown(text, defaultSelection)
 
 		return CreateDropdownElement(
 			parentFrame,
 			text,
 			false,
 			nil,
-			nil
+			nil,
+			defaultSelection
 		)
 
 	end
@@ -1275,7 +1284,8 @@ AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
 	function obj:CreateToggleDropdown(
 		text,
 		default,
-		callback
+		callback,
+		defaultSelection
 	)
 
 		return CreateDropdownElement(
@@ -1283,7 +1293,8 @@ AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
 			text,
 			true,
 			default,
-			callback
+			callback,
+			defaultSelection
 		)
 
 	end
