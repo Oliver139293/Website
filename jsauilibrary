@@ -770,6 +770,15 @@ CreateDropdownElement = function(
 
 	local dropdownObj = {}
 	
+	local hasSlider = false
+
+	local function SetValueDisplay(value)
+		if SelectedLabel then
+			SelectedLabel.Text = tostring(value)
+			SelectedLabel.TextColor3 = Theme.SubText
+		end
+	end
+
 	--=====================================================================
 	-- SELECTED DROPDOWN ITEM
 	--=====================================================================
@@ -832,6 +841,8 @@ CreateDropdownElement = function(
 	dropdownObj.GetSelected = function()
 		return selectedText
 	end
+	
+	dropdownObj.SetValueDisplay = SetValueDisplay
 
 	dropdownObj.ClearSelection = function()
 
@@ -1204,6 +1215,39 @@ AttachElementFunctions = function(obj, parentFrame, onDropdownSelected)
 	end
 
 	function obj:CreateSlider(text, minValue, maxValue, defaultValue, callback)
+
+		-- If this is a dropdown, show the slider value in the header
+		if onDropdownSelected then
+
+			local originalCallback = callback
+
+			local slider = CreateSliderElement(
+				parentFrame,
+				text,
+				minValue,
+				maxValue,
+				defaultValue,
+				function(value)
+
+					-- Update dropdown header value
+					if obj.SetValueDisplay then
+						obj.SetValueDisplay(value)
+					end
+
+					-- Run user's callback
+					if originalCallback then
+						originalCallback(value)
+					end
+
+				end
+			)
+
+			if obj.SetValueDisplay then
+				obj.SetValueDisplay(slider.Get())
+			end
+
+			return slider
+		end
 
 		return CreateSliderElement(
 			parentFrame,
