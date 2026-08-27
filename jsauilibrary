@@ -86,6 +86,7 @@ local AttachElementFunctions
 local CreateToggleElement
 local CreateButtonElement
 local CreateDropdownElement
+local CreateMultiDropdownElement
 local CreateSliderElement
 
 --=========================================================================
@@ -1282,6 +1283,15 @@ AttachElementFunctions = function(
 		)
 
 	end
+	
+	function obj:CreateMultiDropdown(text)
+
+		return CreateMultiDropdownElement(
+			parentFrame,
+			text
+		)
+
+	end
 
 	function obj:CreateToggleDropdown(
 		text,
@@ -1299,6 +1309,349 @@ AttachElementFunctions = function(
 			defaultSelection
 		)
 
+	end
+	
+	--=========================================================================
+	-- MULTI SELECT DROPDOWN
+	--=========================================================================
+	CreateMultiDropdownElement = function(parentFrame, text)
+
+		local expanded = false
+		local selections = {}
+
+		local Container = Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 26),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = Theme.ElementBG,
+			BorderSizePixel = 0,
+			Parent = parentFrame,
+			ClipsDescendants = true,
+		}, {
+			Create("UICorner", {
+				CornerRadius = UDim.new(0, 4)
+			}),
+
+			Create("UIListLayout", {
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 0),
+			}),
+		})
+
+		-- HEADER
+		local Header = Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 26),
+			BackgroundTransparency = 1,
+			LayoutOrder = 1,
+			Parent = Container,
+		})
+
+		-- EXPAND BUTTON
+		local ExpandBtn = Create("TextButton", {
+			Size = UDim2.new(0, 18, 0, 18),
+			Position = UDim2.new(0, 5, 0.5, -9),
+			BackgroundColor3 = Color3.fromRGB(46, 46, 51),
+			AutoButtonColor = false,
+			Text = "+",
+			Font = Theme.FontBold,
+			TextSize = 14,
+			TextColor3 = Theme.Text,
+			Parent = Header,
+		}, {
+			Create("UICorner", {
+				CornerRadius = UDim.new(0, 4)
+			}),
+		})
+
+		-- TITLE
+		local Title = Create("TextLabel", {
+			Text = text,
+			Font = Theme.Font,
+			TextSize = 13,
+			TextColor3 = Theme.Text,
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -40, 1, 0),
+			Position = UDim2.new(0, 28, 0, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = Header,
+		})
+
+		-- INNER
+		local Inner = Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0),
+			BackgroundTransparency = 1,
+			Visible = false,
+			LayoutOrder = 2,
+			Parent = Container,
+			ClipsDescendants = true,
+		}, {
+			Create("UIListLayout", {
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 4),
+			}),
+
+			Create("UIPadding", {
+				PaddingLeft = UDim.new(0, 14),
+				PaddingRight = UDim.new(0, 4),
+				PaddingTop = UDim.new(0, 4),
+				PaddingBottom = UDim.new(0, 6),
+			}),
+		})
+
+		local InnerLayout =
+			Inner:FindFirstChildOfClass("UIListLayout")
+
+		local InnerPadding =
+			Inner:FindFirstChildOfClass("UIPadding")
+
+		--==================================================
+		-- UPDATE SIZE
+		--==================================================
+
+		local function GetInnerHeight()
+
+			local height =
+				InnerLayout.AbsoluteContentSize.Y
+
+			height += InnerPadding.PaddingTop.Offset
+			height += InnerPadding.PaddingBottom.Offset
+
+			return height
+		end
+
+		local function UpdateSize(animated)
+
+			local targetSize =
+				UDim2.new(
+					1,
+					0,
+					0,
+					GetInnerHeight()
+				)
+
+			if animated then
+
+				TweenService:Create(
+					Inner,
+					TweenInfo.new(
+						0.25,
+						Enum.EasingStyle.Quart,
+						Enum.EasingDirection.Out
+					),
+					{
+						Size = targetSize
+					}
+				):Play()
+
+			else
+
+				Inner.Size = targetSize
+
+			end
+		end
+
+		--==================================================
+		-- EXPAND
+		--==================================================
+
+		ExpandBtn.MouseButton1Click:Connect(function()
+
+			expanded = not expanded
+
+			if expanded then
+
+				Inner.Visible = true
+
+				Inner.Size =
+					UDim2.new(
+						1,
+						0,
+						0,
+						0
+					)
+
+				UpdateSize(true)
+
+				ExpandBtn.Text = "−"
+
+			else
+
+				local tween =
+					TweenService:Create(
+						Inner,
+						TweenInfo.new(
+							0.25,
+							Enum.EasingStyle.Quart,
+							Enum.EasingDirection.Out
+						),
+						{
+							Size =
+							UDim2.new(
+								1,
+								0,
+								0,
+								0
+							)
+						}
+					)
+
+				tween:Play()
+
+				tween.Completed:Connect(function()
+
+					if not expanded then
+						Inner.Visible = false
+					end
+
+				end)
+
+				ExpandBtn.Text = "+"
+
+			end
+		end)
+
+		--==================================================
+		-- ADD OPTION
+		--==================================================
+
+		local function AddOption(optionName, default, callback)
+
+			selections[optionName] = default == true
+
+			local Holder = Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 26),
+				BackgroundColor3 = Theme.ElementBG,
+				BorderSizePixel = 0,
+				Parent = Inner,
+			}, {
+				Create("UICorner", {
+					CornerRadius = UDim.new(0, 4)
+				}),
+			})
+
+			local Label = Create("TextLabel", {
+				Text = optionName,
+				Font = Theme.Font,
+				TextSize = 13,
+				TextColor3 = Theme.Text,
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, -46, 1, 0),
+				Position = UDim2.new(0, 10, 0, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Parent = Holder,
+			})
+
+			local Check = Create("Frame", {
+				Size = UDim2.new(0, 16, 0, 16),
+				Position = UDim2.new(1, -26, 0.5, -8),
+				BackgroundColor3 =
+					selections[optionName]
+					and Theme.Accent
+					or Theme.SwitchOff,
+				BorderSizePixel = 0,
+				Parent = Holder,
+			}, {
+				Create("UICorner", {
+					CornerRadius = UDim.new(0, 4)
+				}),
+			})
+
+			local CheckLabel = Create("TextLabel", {
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				Text = selections[optionName] and "✓" or "",
+				Font = Theme.FontBold,
+				TextSize = 12,
+				TextColor3 = Color3.fromRGB(255, 255, 255),
+				Parent = Check,
+			})
+
+			local Click = Create("TextButton", {
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				Text = "",
+				Parent = Holder,
+			})
+
+			local function SetState(state)
+
+				selections[optionName] = state
+
+				Check.BackgroundColor3 =
+					state
+					and Theme.Accent
+					or Theme.SwitchOff
+
+				CheckLabel.Text =
+					state and "✓" or ""
+
+				if callback then
+					callback(state, selections)
+				end
+
+			end
+
+			Click.MouseButton1Click:Connect(function()
+
+				SetState(
+					not selections[optionName]
+				)
+
+			end)
+
+			return {
+				Instance = Holder,
+
+				Set = SetState,
+
+				Get = function()
+					return selections[optionName]
+				end
+			}
+		end
+
+		local obj = {}
+
+		obj.Instance = Container
+		obj.Inner = Inner
+
+		function obj:AddOption(optionName, default, callback)
+			return AddOption(
+				optionName,
+				default,
+				callback
+			)
+		end
+
+		function obj:GetSelected()
+
+			local result = {}
+
+			for option, selected in pairs(selections) do
+
+				if selected then
+					table.insert(result, option)
+				end
+
+			end
+
+			return result
+		end
+
+		function obj:IsSelected(optionName)
+			return selections[optionName] == true
+		end
+
+		function obj:Set(optionName, state)
+
+			if selections[optionName] ~= nil then
+
+				selections[optionName] = state
+
+			end
+
+		end
+
+		return obj
 	end
 end
 
