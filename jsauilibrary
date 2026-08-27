@@ -1224,47 +1224,41 @@ AttachElementFunctions = function(
 
 	function obj:CreateSlider(text, minValue, maxValue, defaultValue, callback)
 
-		-- If this is a dropdown, show the slider value in the header
+		local sliderCallback = callback
+
 		if onDropdownSelected then
 
-			local originalCallback = callback
+			sliderCallback = function(value)
 
-			local slider = CreateSliderElement(
-				parentFrame,
-				text,
-				minValue,
-				maxValue,
-				defaultValue,
-				function(value)
-
-					-- Update dropdown header value
-					if obj.SetValueDisplay then
-						obj.SetValueDisplay(value)
-					end
-
-					-- Run user's callback
-					if originalCallback then
-						originalCallback(value)
-					end
-
+				-- Show value in dropdown header
+				if obj.SetValueDisplay then
+					obj.SetValueDisplay(value)
 				end
-			)
 
-			if obj.SetValueDisplay then
-				obj.SetValueDisplay(slider.Get())
+				-- Run original callback
+				if callback then
+					callback(value)
+				end
+
 			end
 
-			return slider
 		end
 
-		return CreateSliderElement(
+		local slider = CreateSliderElement(
 			parentFrame,
 			text,
 			minValue,
 			maxValue,
 			defaultValue,
-			callback
+			sliderCallback
 		)
+
+		-- Show default value immediately
+		if onDropdownSelected and obj.SetValueDisplay then
+			obj.SetValueDisplay(slider.Get())
+		end
+
+		return slider
 
 	end
 
