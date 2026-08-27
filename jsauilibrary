@@ -1173,11 +1173,19 @@ CreateDropdownElement = function(
 	end
 
 	--=========================================================================
-	-- RETURN DROPDOWN
+	-- ATTACH ELEMENT CREATION METHODS TO DROPDOWN
 	--=========================================================================
 
 	dropdownObj.Instance = Container
 	dropdownObj.Inner = Inner
+
+	AttachElementFunctions(
+		dropdownObj,
+		Inner,
+		SelectItem,
+		defaultSelection,
+		SelectItem
+	)
 
 	return dropdownObj
 
